@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     paths:
-      - 'invest_log.zip'
+      - '**.zip'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
@@ -15,9 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Unzip source
-        run: unzip -o invest_log.zip -d src
+      - name: Unzip latest source
+        run: |
+          Z=$(git log --name-only --pretty=format: -- '*.zip' | grep -m1 '\.zip$')
+          echo "사용할 파일: $Z"
+          unzip -o "$Z" -d src
 
       - uses: actions/setup-java@v4
         with:
