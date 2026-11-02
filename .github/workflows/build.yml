@@ -1,0 +1,48 @@
+name: Build APK
+
+on:
+  push:
+    paths:
+      - 'invest_log.zip'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip source
+        run: unzip -o invest_log.zip -d src
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build APK
+        working-directory: src/invest_log
+        run: |
+          flutter create --platforms=android --org com.investlog --project-name invest_log .
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' $M || sed -i 's#<manifest\([^>]*\)>#<manifest\1>\n    <uses-permission android:name="android.permission.INTERNET"/>#' $M
+          sed -i 's#android:label="[^"]*"#android:label="투자노트"#' $M
+          flutter pub get
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk ../../InvestNote.apk
+
+      - name: Publish APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: 투자노트 빌드 ${{ github.run_number }}
+          files: InvestNote.apk
